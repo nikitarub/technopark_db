@@ -33,3 +33,9 @@ go run main.go --scheme http
 
 # Ура версия 1.0
 работает user/nickname/create
+
+теперь запуск :
+`go run main.go`
+
+при этом нужна postgresql на localhost на 5432 порту с user: docker password: docker 
+`docker:docker@localhost:5432`
