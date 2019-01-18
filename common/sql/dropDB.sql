@@ -1,0 +1,12 @@
+
+DROP TABLE users CASCADE;
+
+DROP TABLE forums CASCADE;
+
+DROP TABLE threads CASCADE;
+
+DROP TABLE posts CASCADE;
+
+DROP SEQUENCE posts_id_sequance;
+
+DROP TABLE votes CASCADE;
