@@ -10,19 +10,22 @@ const ERROR = {
     "message": "Can't find user with id #42\n"
   }
 
-const fastify = require('fastify')({
-    logger: false
-});
+// const fastify = require('fastify')({
+//     logger: false
+// });
 
-fastify.get('/api/', async (request, reply) => {
-    reply.type('application/json').code(200);
-    return { url: 'world' };
-});
+// fastify.get('/api/', async (request, reply) => {
+//     reply.type('application/json').code(200);
+//     return { url: 'world' };
+// });
 
+
+var express = require('express');
+var fastify = express();
 
 
 // ------------------------------------ THREAD ------------------------------------------
-Promise.all(fastify.post('/api/thread/:slug_or_id/create', async (request, reply) => {
+fastify.post('/api/thread/:slug_or_id/create', async (request, reply) => {
     var slug_or_id = request.params.slug_or_id;
 
     var forum, thread;
@@ -105,9 +108,7 @@ Promise.all(fastify.post('/api/thread/:slug_or_id/create', async (request, reply
         return ERROR;
     }
 
-})).then( () => {
-    console.log("lol")
-})
+});
 
 
 fastify.get('/api/thread/:slug_or_id/details', async (request, reply) => {
@@ -625,21 +626,17 @@ fastify.post('/api/service/clear', async (request, reply) => {
 });
 
 
-fastify.addContentTypeParser('application/json', { parseAs: 'string' }, function (req, body, done) {
-    try {
-      var json = JSON.parse(body)
-      done(null, json)
-    } catch (err) {
-    //   err.statusCode = 400
-      done(null, undefined);
-    }
-});
+// fastify.addContentTypeParser('application/json', { parseAs: 'string' }, function (req, body, done) {
+//     try {
+//       var json = JSON.parse(body)
+//       done(null, json)
+//     } catch (err) {
+//     //   err.statusCode = 400
+//       done(null, undefined);
+//     }
+// });
 
 
-fastify.decorate('conf', {
-    db: 'some.db',
-    port: 5000
-});
 
 fastify.listen(5000, (err, address) => {
     if (err) throw err;

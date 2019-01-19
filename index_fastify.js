@@ -22,7 +22,7 @@ fastify.get('/api/', async (request, reply) => {
 
 
 // ------------------------------------ THREAD ------------------------------------------
-Promise.all(fastify.post('/api/thread/:slug_or_id/create', async (request, reply) => {
+fastify.post('/api/thread/:slug_or_id/create', async (request, reply) => {
     var slug_or_id = request.params.slug_or_id;
 
     var forum, thread;
@@ -67,7 +67,6 @@ Promise.all(fastify.post('/api/thread/:slug_or_id/create', async (request, reply
 
     var bigData = [];
     var time = new Date();
-    console.log("DATA: FORUM: ", forum, " THREAD: ", thread);
     for (var [index, body] of request.body.entries()){   
         var data; 
         data = threadUtils.parseThreadPost(body, time);
@@ -84,7 +83,6 @@ Promise.all(fastify.post('/api/thread/:slug_or_id/create', async (request, reply
 
         if (promise.message || promise === "lol"){
             reply.type('application/json').code(409);
-            console.log("__DFGHJK__")
             return {"message": "Parent post was created in another thread"}
         }
         
@@ -99,16 +97,13 @@ Promise.all(fastify.post('/api/thread/:slug_or_id/create', async (request, reply
         console.log("ERROR: ", error);
         if (error.message === "No data returned from the query."){
             reply.type('application/json').code(201);
-            return "hui"
+            return []
         }
         reply.type('application/json').code(404);
         return ERROR;
     }
 
-})).then( () => {
-    console.log("lol")
 })
-
 
 fastify.get('/api/thread/:slug_or_id/details', async (request, reply) => {
     try {
@@ -641,7 +636,7 @@ fastify.decorate('conf', {
     port: 5000
 });
 
-fastify.listen(5000, (err, address) => {
+fastify.listen(5000, '0.0.0.0', (err, address) => {
     if (err) throw err;
     fastify.log.info(`server listening on ${address}`);
 });

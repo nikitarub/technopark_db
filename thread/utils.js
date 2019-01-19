@@ -14,9 +14,6 @@ var parseThreadPost = function(data, time) {
         if (time){
             data.created = time;
         }
-        if (data.id) {
-            data.id = 42;
-        }
         
         return data;
     }

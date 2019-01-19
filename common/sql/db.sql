@@ -32,8 +32,8 @@ CREATE UNLOGGED TABLE IF NOT EXISTS threads (
 
 
 CREATE UNLOGGED TABLE IF NOT EXISTS posts (
-    _id         SERIAL       NOT NULL PRIMARY KEY,
-    id          INTEGER       NOT NULL,
+    id         INTEGER       NOT NULL PRIMARY KEY,
+    -- id          INTEGER       NOT NULL,
     author      CITEXT          NOT NULL,
     created     TIMESTAMP       WITH TIME ZONE NOT NULL DEFAULT NOW(),
     forum       CITEXT          NOT NULL,
@@ -52,3 +52,8 @@ CREATE UNLOGGED TABLE IF NOT EXISTS votes (
     thread_id   INTEGER          NOT NULL,
     voice       int4         NOT NULL
 );
+
+
+-- CREATE INDEX IF NOT EXISTS voice_thread_nickname_index ON votes(voice, thread_id, nickname);
+
+CREATE INDEX IF NOT EXISTS nickname_thread_index ON votes(nickname, thread_id);

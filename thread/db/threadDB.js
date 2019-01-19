@@ -1,13 +1,29 @@
 var DB = require('../../common/db');
 
+var getNextIDPost = function(){
+    return DB.db.one('SELECT COUNT(*)::integer AS id, (SELECT id FROM posts ORDER BY id DESC LIMIT 1) AS _id FROM posts') //"SELECT id from posts order by id desc limit 1"); 
+}
+
+var nextID;
+// НЕ ТРОГАТЬ 
+async function getID(){
+    try {
+        nextID = await getNextIDPost();
+        nextID = nextID.id + 0;
+    } catch (error) {
+        nextID = 0;
+        // выписать сюда каунт await getNextIDPost();
+    }
+}
+getID();
+
+
 
 var getPathPost = function(postID){
     return DB.db.one("SELECT path FROM posts WHERE id = $1 LIMIT 1", [postID]);
 }
 
-var getNextIDPost = function(){
-    return DB.db.one("SELECT _id from posts order by _id desc limit 1"); 
-}
+
 
 
 var createPathArray = async function(post){
@@ -52,20 +68,22 @@ var createTreadPost = async function(inputData){
     if (inputData[0].parent){
         try {
             var promise = await getParentForumAndThread(inputData[0].parent);
-            if (promise.forum != inputData[0].forum || promise.thread != inputData[0].thread){
+            if (promise.thread != inputData[0].thread){
                 return {"message": "Parent post was created in another thread"}
             }
-        } catch (error) {return "lol";}
+        } catch (error) {
+            return "lol";}
     }
-    var nextID;
-    try {
-        nextID = await getNextIDPost();
-        nextID = nextID._id + 1;
-    } catch (error) {
-        nextID = 1;
-    }
-    
-    var startID = nextID;
+    // var nextID;
+    // try {
+    //     nextID = await getNextIDPost();
+    //     console.log("nextID: ", nextID);
+    //     nextID = nextID.id + 0;
+    // } catch (error) {
+    //     nextID = 0;
+    //     // выписать сюда каунт await getNextIDPost();
+    //     console.log("nextID_err: ", nextID);
+    // }
 
 
     var keys = Object.keys(inputData[0]);
@@ -86,7 +104,8 @@ var createTreadPost = async function(inputData){
     var tmp_index = 1;
 
     for (var [index1, data] of inputData.entries()){
-        data.id = startID;
+        nextID += 1;
+        data.id = nextID;
         data.path = await createPathArray(data);
 
         var keys = Object.keys(data);
@@ -106,13 +125,13 @@ var createTreadPost = async function(inputData){
         }
         
 
-        startID += 1;
+        
     }
 
-    queryString += values + " ON CONFLICT DO NOTHING RETURNING *";
-
+    queryString += values + " RETURNING *";
+    
     // update n thread and m posts;
-    return DB.db.manyOrNone(queryString, insertionData);
+    return DB.db.many(queryString, insertionData);
 
 }
 
@@ -192,7 +211,7 @@ var getPostsByIDFlat = function(id, queryParams){
         queryParams.desc = false;
     }
     
-    const pathSortRule = queryParams.desc ? '_id DESC' : '_id ASC';
+    const pathSortRule = queryParams.desc ? 'id DESC' : 'id ASC';
     if (queryParams.since && !queryParams.desc) {
         return DB.db.many('SELECT * FROM posts WHERE thread=$1 AND id>$2 ORDER BY $3:raw LIMIT $4', 
         [
@@ -270,7 +289,7 @@ var getPostsByIDParentTree = function(id, queryParams) {
         queryParams.desc = false;
     }
     const pathSortRule = queryParams.desc ? 'pid.parent_id DESC, path ASC' : 'path ASC';
-    const idSortRule = queryParams.desc ? '_id DESC' : '_id ASC';
+    const idSortRule = queryParams.desc ? 'id DESC' : 'id ASC';
     if (queryParams.since && !queryParams.desc) {
         return DB.db.manyOrNone(
             `SELECT * FROM posts

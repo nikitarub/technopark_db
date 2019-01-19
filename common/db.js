@@ -11,3 +11,20 @@ module.exports.db = db;
 //     .catch(function (error) {
 //         console.log("ERROR:", error);
 //     });
+
+// const { Pool, Client } = require('pg')
+
+// const connectionString = 'postgres://docker:docker@localhost:5432/tp'
+
+// const pool = new Pool({
+//   connectionString: connectionString,
+// })
+
+// pool.query('SELECT NOW()', (err, res) => {
+//     console.log(err, res)
+//     pool.end()
+// })
+
+
+
+// module.exports.db = pool;
