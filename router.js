@@ -67,7 +67,6 @@ Promise.all(fastify.post('/api/thread/:slug_or_id/create', async (request, reply
 
     var bigData = [];
     var time = new Date();
-    console.log("DATA: FORUM: ", forum, " THREAD: ", thread);
     for (var [index, body] of request.body.entries()){   
         var data; 
         data = threadUtils.parseThreadPost(body, time);
@@ -84,7 +83,6 @@ Promise.all(fastify.post('/api/thread/:slug_or_id/create', async (request, reply
 
         if (promise.message || promise === "lol"){
             reply.type('application/json').code(409);
-            console.log("__DFGHJK__")
             return {"message": "Parent post was created in another thread"}
         }
         
@@ -96,7 +94,6 @@ Promise.all(fastify.post('/api/thread/:slug_or_id/create', async (request, reply
         return promise;
 
     } catch (error) {
-        console.log("ERROR: ", error);
         if (error.message === "No data returned from the query."){
             reply.type('application/json').code(201);
             return "hui"
@@ -106,7 +103,7 @@ Promise.all(fastify.post('/api/thread/:slug_or_id/create', async (request, reply
     }
 
 })).then( () => {
-    console.log("lol")
+    // console.log("lol")
 })
 
 
