@@ -397,6 +397,8 @@ fastify.post('/api/forum/:slug/create', async (request, reply) => {
     try {
         var promise = await forumDB.createForumThread(nickname, data);
         
+        await forumDB.createForumUserRelations([[theForum, nickname]]);
+        
         reply.type('application/json').code(201);
         promise.id = +promise.id;
         promise.forum = theForum;
