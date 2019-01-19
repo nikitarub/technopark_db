@@ -23,9 +23,6 @@ var getPathPost = function(postID){
     return DB.db.one("SELECT path FROM posts WHERE id = $1 LIMIT 1", [postID]);
 }
 
-
-
-
 var createPathArray = async function(post){
     var array = [];
     array.push(post.id);
@@ -36,9 +33,9 @@ var createPathArray = async function(post){
     if (!post.parent) {
         pathPost = post.path || string;
     } else {
-        const promisePath = await getPathPost(post.parent)
+        var promisePath = await getPathPost(post.parent)
         promisePath.path.push(post.id);
-        const pathString = await createPathString(promisePath.path);
+        var pathString = await createPathString(promisePath.path);
         pathPost = post.path || pathString || string
     }
 
@@ -47,12 +44,14 @@ var createPathArray = async function(post){
 
 function createPathString(array){
     var string = "{";
-    for (var [index, element] of array.entries()){
+    var index = 0;
+    array.forEach(element => {
         string += element;
         if (index < array.length - 1){
             string += ", ";
         }
-    };
+        index += 1;
+    });
 
     string += "}";
     return string;
@@ -74,21 +73,11 @@ var createTreadPost = async function(inputData){
         } catch (error) {
             return "lol";}
     }
-    // var nextID;
-    // try {
-    //     nextID = await getNextIDPost();
-    //     console.log("nextID: ", nextID);
-    //     nextID = nextID.id + 0;
-    // } catch (error) {
-    //     nextID = 0;
-    //     // выписать сюда каунт await getNextIDPost();
-    //     console.log("nextID_err: ", nextID);
-    // }
-
 
     var keys = Object.keys(inputData[0]);
     var insertionData = [];
     var queryString = "INSERT INTO posts(";
+    
 
     // тут происходит подбор ключей для вставки
     for (var [index, key] of keys.entries()){
@@ -108,6 +97,8 @@ var createTreadPost = async function(inputData){
         data.id = nextID;
         data.path = await createPathArray(data);
 
+        
+
         var keys = Object.keys(data);
         values += "(";
         for (var [index, key] of keys.entries()){
@@ -123,9 +114,7 @@ var createTreadPost = async function(inputData){
         if ((index1 + 2) <= inputData.length){
             values += ', ';            
         }
-        
 
-        
     }
 
     queryString += values + " RETURNING *";
@@ -205,6 +194,17 @@ var decrementThreadVoteBySlugOrId = function(slug_or_id, voice){
 
 var getPostsByIDFlat = function(id, queryParams){
 
+
+    var idQuery = '';
+    if (!Number.isInteger(+id)){ // slug_or_id
+        idQuery = 'SELECT id::integer FROM threads WHERE slug=$1'
+        
+    } else {
+        idQuery = 'SELECT id::integer FROM threads WHERE id=$1'
+    }
+
+
+
     if (queryParams.desc === "true"){
         queryParams.desc = true;
     } else {
@@ -213,7 +213,7 @@ var getPostsByIDFlat = function(id, queryParams){
     
     const pathSortRule = queryParams.desc ? 'id DESC' : 'id ASC';
     if (queryParams.since && !queryParams.desc) {
-        return DB.db.many('SELECT * FROM posts WHERE thread=$1 AND id>$2 ORDER BY $3:raw LIMIT $4', 
+        return DB.db.many('SELECT * FROM posts WHERE thread=('+idQuery+') AND id>$2 ORDER BY $3:raw LIMIT $4', 
         [
             id,
             queryParams.since,
@@ -221,7 +221,7 @@ var getPostsByIDFlat = function(id, queryParams){
             queryParams.limit
         ]);
     } else if (queryParams.since && queryParams.desc) {
-        return DB.db.many('SELECT * FROM posts WHERE thread=$1 AND id<$2 ORDER BY $3:raw LIMIT $4', 
+        return DB.db.many('SELECT * FROM posts WHERE thread=('+idQuery+') AND id<$2 ORDER BY $3:raw LIMIT $4', 
         [
             id,
             queryParams.since,
@@ -229,7 +229,7 @@ var getPostsByIDFlat = function(id, queryParams){
             queryParams.limit
         ]);
     } else if (!queryParams.since) {
-        return DB.db.many('SELECT * FROM posts WHERE thread=$1 ORDER BY $2:raw LIMIT $3', 
+        return DB.db.many('SELECT * FROM posts WHERE thread=('+idQuery+') ORDER BY $2:raw LIMIT $3', 
         [
             id,
             pathSortRule,
@@ -241,6 +241,16 @@ var getPostsByIDFlat = function(id, queryParams){
 
 var getPostsByIDTree = function(id, queryParams){
 
+    var idQuery = '';
+    if (!Number.isInteger(+id)){ // slug_or_id
+        idQuery = 'SELECT id::integer FROM threads WHERE slug=$1'
+        
+    } else {
+        idQuery = 'SELECT id::integer FROM threads WHERE id=$1'
+    }
+
+
+
     if (queryParams.desc === "true"){
         queryParams.desc = true;
     } else {
@@ -251,7 +261,7 @@ var getPostsByIDTree = function(id, queryParams){
     
     if (queryParams.since && !queryParams.desc) {
         return DB.db.manyOrNone(`SELECT * FROM posts
-        WHERE thread=$1 AND path > (SELECT path FROM posts WHERE id=$2)
+        WHERE thread=(`+idQuery+`) AND path > (SELECT path FROM posts WHERE id=$2)
         ORDER BY $3:raw LIMIT $4`,
         [
             id,
@@ -261,7 +271,7 @@ var getPostsByIDTree = function(id, queryParams){
         ]);   
     } else if (queryParams.since && queryParams.desc) {
         return DB.db.manyOrNone(`SELECT * FROM posts
-        WHERE thread=$1 AND path < (SELECT path FROM posts WHERE id=$2)
+        WHERE thread=(`+idQuery+`) AND path < (SELECT path FROM posts WHERE id=$2)
         ORDER BY $3:raw LIMIT $4`,
         [
             id,
@@ -271,7 +281,7 @@ var getPostsByIDTree = function(id, queryParams){
         ]);   
     } else if (!queryParams.since) {
         return DB.db.manyOrNone(`SELECT * FROM posts
-        WHERE thread=$1 
+        WHERE thread=(`+idQuery+`) 
         ORDER BY $2:raw LIMIT $3`,
         [
             id,
@@ -283,21 +293,31 @@ var getPostsByIDTree = function(id, queryParams){
 }
 
 var getPostsByIDParentTree = function(id, queryParams) {
+
+    var idQuery = '';
+    if (!Number.isInteger(+id)){ // slug_or_id
+        idQuery = 'SELECT id::integer FROM threads WHERE slug=$1'
+        
+    } else {
+        idQuery = 'SELECT id::integer FROM threads WHERE id=$1'
+    }
+
+    
     if (queryParams.desc === "true"){
         queryParams.desc = true;
     } else {
         queryParams.desc = false;
     }
-    const pathSortRule = queryParams.desc ? 'pid.parent_id DESC, path ASC' : 'path ASC';
+    const pathSortRule = queryParams.desc ? 'Parent.parent_id DESC, path ASC' : 'path ASC';
     const idSortRule = queryParams.desc ? 'id DESC' : 'id ASC';
     if (queryParams.since && !queryParams.desc) {
         return DB.db.manyOrNone(
             `SELECT * FROM posts
             JOIN (
-                SELECT id AS parent_id FROM posts WHERE parent = 0 AND thread=$1 AND path[1] > (SELECT path[1] FROM posts WHERE id=$2)
+                SELECT id AS parent_id FROM posts WHERE parent = 0 AND thread=(`+idQuery+`) AND path[1] > (SELECT path[1] FROM posts WHERE id=$2)
                 ORDER BY $3:raw LIMIT $4
-            ) AS pid
-            ON (thread=$1 AND pid.parent_id=path[1])
+            ) AS Parent
+            ON (thread=(`+idQuery+`) AND Parent.parent_id=path[1])
             ORDER BY $5:raw
             `,
             [
@@ -312,10 +332,10 @@ var getPostsByIDParentTree = function(id, queryParams) {
         return DB.db.manyOrNone(
             `SELECT * FROM posts
             JOIN (
-                SELECT id AS parent_id FROM posts WHERE parent = 0 AND thread=$1 AND path[1] < (SELECT path[1] FROM posts WHERE id=$2)
+                SELECT id AS parent_id FROM posts WHERE parent = 0 AND thread=(`+idQuery+`) AND path[1] < (SELECT path[1] FROM posts WHERE id=$2)
                 ORDER BY $3:raw LIMIT $4
-            ) AS pid
-            ON (thread=$1 AND pid.parent_id=path[1])
+            ) AS Parent
+            ON (thread=(`+idQuery+`) AND Parent.parent_id=path[1])
             ORDER BY $5:raw
             `,
             [
@@ -330,10 +350,10 @@ var getPostsByIDParentTree = function(id, queryParams) {
         return DB.db.manyOrNone(
             `SELECT * FROM posts
             JOIN (
-                SELECT id AS parent_id FROM posts WHERE parent = 0 AND thread=$1
+                SELECT id AS parent_id FROM posts WHERE parent = 0 AND thread=(`+idQuery+`)
                 ORDER BY $3:raw LIMIT $4
-            ) AS pid
-            ON (thread=$1 AND pid.parent_id=path[1])
+            ) AS Parent
+            ON (thread=(`+idQuery+`) AND Parent.parent_id=path[1])
             ORDER BY $5:raw
             `,
             [

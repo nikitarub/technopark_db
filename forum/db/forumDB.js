@@ -130,7 +130,7 @@ var updateThreadBySlug = function(slug, data){
 
 
 var updateForumPostsCountBySlug = function(forum, nPosts){
-    DB.db.one('UPDATE forums SET posts = posts + $1 WHERE slug = $2', [nPosts, forum]);
+    DB.db.none('UPDATE forums SET posts = posts + $1 WHERE slug = $2', [nPosts, forum]);
 }
 
 var updateForumThreadsCountBySlug = function(forum, nThreads){
@@ -138,34 +138,47 @@ var updateForumThreadsCountBySlug = function(forum, nThreads){
 }
 
 var getForumUsersBySlug = function(slug, queryParams){
-
+    slug = `(SELECT slug FROM forums WHERE slug='${slug}')`
     queryParams.desc = queryParams.desc === 'true';
     if (queryParams.since && !queryParams.desc) {
-        return DB.db.many('SELECT * FROM users AS U RIGHT OUTER JOIN ( SELECT author FROM threads WHERE forum=$1 UNION (SELECT author FROM posts WHERE forum=$1)) AS UFP ON (U.nickname = UFP.author) WHERE U.nickname>$2 ORDER BY $3:raw LIMIT $4', 
+        return DB.db.manyOrNone(`
+        SELECT * FROM users AS U RIGHT OUTER JOIN forumusers AS FU
+        ON FU.nickname = U.nickname
+        WHERE FU.forum=$1:raw AND U.nickname>$2 ORDER BY $3:raw LIMIT $4
+        ` 
+        ,
         [
             slug,
             queryParams.since,
-            (queryParams.desc ? 'author DESC' : 'author ASC'),
+            (queryParams.desc ? 'FU.nickname DESC' : 'FU.nickname ASC'),
             queryParams.limit
         ]);
     } else if (queryParams.since && queryParams.desc) {
-        return DB.db.many('SELECT * FROM users AS U RIGHT OUTER JOIN ( SELECT author FROM threads WHERE forum=$1 UNION (SELECT author FROM posts WHERE forum=$1)) AS UFP ON (U.nickname = UFP.author) WHERE U.nickname<$2 ORDER BY $3:raw LIMIT $4', 
+        return DB.db.manyOrNone(`
+        SELECT * FROM users AS U RIGHT OUTER JOIN forumusers AS FU
+        ON FU.nickname = U.nickname
+        WHERE FU.forum=$1:raw AND U.nickname<$2 ORDER BY $3:raw LIMIT $4
+        `, 
         [
             slug,
             queryParams.since,
-            (queryParams.desc ? 'author DESC' : 'author ASC'),
+            (queryParams.desc ? 'FU.nickname DESC' : 'FU.nickname ASC'),
             queryParams.limit
         ]);
     } else if (!queryParams.since) {
-        return DB.db.many('SELECT * FROM users AS U RIGHT OUTER JOIN ( SELECT author FROM threads WHERE forum=$1 UNION (SELECT author FROM posts WHERE forum=$1)) AS UFP ON (U.nickname = UFP.author) ORDER BY $2:raw LIMIT $3', 
+        return DB.db.manyOrNone(
+        `
+        SELECT * FROM users AS U RIGHT OUTER JOIN forumusers AS FU
+        ON FU.nickname = U.nickname
+        WHERE FU.forum=$1:raw ORDER BY $2:raw LIMIT $3
+        `    
+        , 
         [
             slug,
-            (queryParams.desc ? 'author DESC' : 'author ASC'),
+            (queryParams.desc ? 'FU.nickname DESC' : 'FU.nickname ASC'),
             queryParams.limit
         ]);
     }
-    // DB.db.many("SELECT * FROM threads WHERE forum=$1", [slug]);
-    // UNION (SELECT author FROM posts WHERE forum = $1)
 }
 
 
@@ -189,6 +202,41 @@ var clearDB = async function(){
     await DB.db.none('TRUNCATE TABLE users');
 }
 
+
+var createForumUserRelations = function(forumUserPairs){
+    var queryString = "INSERT INTO forumusers(forum, nickname) VALUES ";
+
+    var values = '';
+    var tmp_index = 1;
+
+    var insertionData = [];
+
+    for (var [index1, data] of forumUserPairs.entries()){
+        
+        var keys = Object.keys(data);
+        values += "(";
+        for (var [index, key] of keys.entries()){
+            values +=  "$" + (tmp_index);
+            if ((index + 2) <= keys.length){
+                values += ', ';            
+            }
+            tmp_index += 1;
+            insertionData.push(data[key]);
+        }
+
+        values += ')';
+        if ((index1 + 2) <= forumUserPairs.length){
+            values += ', ';            
+        }
+    }
+
+    queryString += values + " ON CONFLICT ON CONSTRAINT unique_forum_user_pair DO NOTHING RETURNING *";
+
+    
+    return DB.db.manyOrNone(queryString, insertionData);
+}
+
+
 module.exports.createForum = createForum;
 module.exports.getForumBySlug = getForumBySlug;
 module.exports.createForumThread = createForumThread;
@@ -200,6 +248,7 @@ module.exports.updateThreadBySlug = updateThreadBySlug;
 module.exports.updateForumPostsCountBySlug = updateForumPostsCountBySlug;
 module.exports.updateForumThreadsCountBySlug = updateForumThreadsCountBySlug;
 module.exports.getForumUsersBySlug = getForumUsersBySlug;
+module.exports.createForumUserRelations = createForumUserRelations;
 
 
 module.exports.getStatusForum = getStatusForum;

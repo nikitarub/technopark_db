@@ -2,13 +2,14 @@ CREATE EXTENSION citext;
 
 
 CREATE UNLOGGED TABLE IF NOT EXISTS users (
-    id          SERIAL       NOT NULL PRIMARY KEY,
-    nickname    CITEXT COLLATE ucs_basic     NOT NULL UNIQUE,
+    id          SERIAL       NOT NULL,
+    nickname    CITEXT COLLATE ucs_basic     NOT NULL,
     fullname    CITEXT    NOT NULL,
     email       CITEXT    NOT NULL UNIQUE,
     about       TEXT      NOT NULL DEFAULT ''
 );
 
+CREATE UNIQUE INDEX idx_on_users_nickname_c ON "users" (nickname COLLATE "ucs_basic");
 
 CREATE UNLOGGED TABLE IF NOT EXISTS forums (
     slug        CITEXT    NOT NULL PRIMARY KEY,
@@ -54,6 +55,17 @@ CREATE UNLOGGED TABLE IF NOT EXISTS votes (
 );
 
 
+CREATE UNLOGGED TABLE IF NOT EXISTS forumusers (
+	forum            CITEXT     				 NOT NULL,
+	nickname         CITEXT COLLATE ucs_basic    NOT NULL
+);
+
 -- CREATE INDEX IF NOT EXISTS voice_thread_nickname_index ON votes(voice, thread_id, nickname);
 
+
+ALTER TABLE forumusers
+ADD CONSTRAINT unique_forum_user_pair UNIQUE (forum, nickname);
+
 CREATE INDEX IF NOT EXISTS nickname_thread_index ON votes(nickname, thread_id);
+
+CREATE INDEX IF NOT EXISTS thread_id_index ON posts(thread, id);

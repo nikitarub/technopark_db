@@ -4,6 +4,7 @@ var forumUtils = require('./forum/utils');
 var forumDB = require('./forum/db/forumDB');
 var threadUtils = require('./thread/utils');
 var threadDB = require('./thread/db/threadDB');
+var morgan = require('morgan');
 
 
 const ERROR = {
@@ -14,11 +15,12 @@ const fastify = require('fastify')({
     logger: false
 });
 
+// fastify.use(morgan('dev'));
+
 fastify.get('/api/', async (request, reply) => {
     reply.type('application/json').code(200);
     return { url: 'world' };
 });
-
 
 
 // ------------------------------------ THREAD ------------------------------------------
@@ -47,7 +49,7 @@ fastify.post('/api/thread/:slug_or_id/create', async (request, reply) => {
 
     if (request.body.length === 0){
         reply.type('application/json').code(201);
-        return [];
+        return []
     }
 
 
@@ -66,12 +68,14 @@ fastify.post('/api/thread/:slug_or_id/create', async (request, reply) => {
  
 
     var bigData = [];
+    var forumUserPairs = [];
     var time = new Date();
     for (var [index, body] of request.body.entries()){   
         var data; 
         data = threadUtils.parseThreadPost(body, time);
         data.forum = forum;
         data.thread = thread;
+        forumUserPairs.push([data.forum, data.author]);
 
         bigData.push(data);
         
@@ -81,6 +85,10 @@ fastify.post('/api/thread/:slug_or_id/create', async (request, reply) => {
         var promise = await threadDB.createTreadPost(bigData);
         reply.type('application/json').code(201);
 
+        
+        var promusers = await forumDB.createForumUserRelations(forumUserPairs);
+
+        
         if (promise.message || promise === "lol"){
             reply.type('application/json').code(409);
             return {"message": "Parent post was created in another thread"}
@@ -94,7 +102,7 @@ fastify.post('/api/thread/:slug_or_id/create', async (request, reply) => {
         return promise;
 
     } catch (error) {
-        console.log("ERROR: ", error);
+        console.log("ERROR: ", error)
         if (error.message === "No data returned from the query."){
             reply.type('application/json').code(201);
             return []
@@ -159,7 +167,7 @@ fastify.post('/api/thread/:slug_or_id/details', async (request, reply) => {
 
 
 fastify.get('/api/thread/:slug_or_id/posts', async (request, reply) => {
-
+    /// TODO перенести theID в getPosts...
     var theID;
     if (!Number.isInteger(+request.params.slug_or_id)){
         try {
@@ -181,11 +189,11 @@ fastify.get('/api/thread/:slug_or_id/posts', async (request, reply) => {
 
     try {
         if ((request.query.sort === "flat") ||  (!request.query.sort)){
-            var promise = await threadDB.getPostsByIDFlat(theID, request.query);
+            var promise = await threadDB.getPostsByIDFlat(request.params.slug_or_id, request.query);
         } else if (request.query.sort === "tree"){
-            var promise = await threadDB.getPostsByIDTree(theID, request.query);
+            var promise = await threadDB.getPostsByIDTree(request.params.slug_or_id, request.query);
         } else if (request.query.sort === "parent_tree"){
-            var promise = await threadDB.getPostsByIDParentTree(theID, request.query);
+            var promise = await threadDB.getPostsByIDParentTree(request.params.slug_or_id, request.query);
         }
         reply.type('application/json').code(200);
         promise.forEach(element => {
