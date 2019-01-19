@@ -1,0 +1,26 @@
+{
+  "name": "technopark_db",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nikitarub/technopark_db.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/nikitarub/technopark_db/issues"
+  },
+  "homepage": "https://github.com/nikitarub/technopark_db#readme",
+  "dependencies": {
+    "ajv": "^6.6.2",
+    "express": "^4.16.4",
+    "fastify": "^1.13.3",
+    "pg": "^7.8.0",
+    "pg-promise": "^8.5.4"
+  }
+}
